@@ -7,7 +7,7 @@ func TestValid(t *testing.T) {
 
 	_, err := NewToken(qr)
 	if err != nil {
-		t.Fatalf("Valid token did not validate: %v", err)
+		t.Errorf("Valid token did not validate: %v", err)
 	}
 }
 
@@ -70,7 +70,7 @@ func TestInvalid(t *testing.T) {
 		t.Run(s.desc, func(t *testing.T) {
 			_, err := NewToken(s.qr)
 			if err == nil {
-				t.Fatalf("Expected invalid token to fail")
+				t.Errorf("Expected invalid token to fail")
 			}
 			t.Log(err)
 		})
