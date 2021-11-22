@@ -9,7 +9,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	// add example issuer/key from specification
+	// add test issuer/key from specification
 	registerIssuer("did:web:nzcp.covid19.health.nz")
 	registerPublicKey(
 		"did:web:nzcp.covid19.health.nz#key-1",
