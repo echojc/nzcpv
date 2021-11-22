@@ -28,10 +28,14 @@ var trustedIssuers = map[string]struct{}{
 	"did:web:nzcp.identity.health.nz": struct{}{},
 }
 
+// By default, the validator only accepts issuers listed in the specification.
+// Use this to register other issuers as valid (e.g. for testing).
 func RegisterIssuer(issuer string) {
 	trustedIssuers[issuer] = struct{}{}
 }
 
+// By default, the validator only accepts keys listed in the specification.
+// Use this to register other public keys as valid (e.g. for testing).
 func RegisterPublicKey(id string, pub *ecdsa.PublicKey) {
 	keys[id] = pub
 }

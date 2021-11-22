@@ -65,6 +65,8 @@ var (
 	ErrInvalidTokenVersion  = errors.New("Token version is invalid")
 )
 
+// Parse an encoded NZCP from the QR code data.
+// If err is nil, the returned token is valid according to the specification.
 func NewToken(qr string) (*Token, error) {
 	if !strings.HasPrefix(qr, "NZCP:/") {
 		return nil, ErrMissingNZCPPrefix
