@@ -28,10 +28,10 @@ var trustedIssuers = map[string]struct{}{
 	"did:web:nzcp.identity.health.nz": struct{}{},
 }
 
-func registerIssuer(issuer string) {
+func RegisterIssuer(issuer string) {
 	trustedIssuers[issuer] = struct{}{}
 }
 
-func registerPublicKey(id string, pub *ecdsa.PublicKey) {
+func RegisterPublicKey(id string, pub *ecdsa.PublicKey) {
 	keys[id] = pub
 }

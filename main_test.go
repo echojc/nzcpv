@@ -1,4 +1,4 @@
-package nzcpv
+package nzcpv_test
 
 import (
 	"crypto/ecdsa"
@@ -6,12 +6,14 @@ import (
 	"math/big"
 	"os"
 	"testing"
+
+	"github.com/echojc/nzcpv"
 )
 
 func TestMain(m *testing.M) {
 	// add test issuer/key from specification
-	registerIssuer("did:web:nzcp.covid19.health.nz")
-	registerPublicKey(
+	nzcpv.RegisterIssuer("did:web:nzcp.covid19.health.nz")
+	nzcpv.RegisterPublicKey(
 		"did:web:nzcp.covid19.health.nz#key-1",
 		&ecdsa.PublicKey{
 			Curve: elliptic.P256(),
