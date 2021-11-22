@@ -1,4 +1,4 @@
-module github.com/echojc/nzcp-check
+module github.com/echojc/nzcpv
 
 go 1.17
 
