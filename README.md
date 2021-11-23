@@ -15,9 +15,9 @@ Family name:    Sparrow
 Date of birth:  1960-04-16
 Valid between:  2021-11-03 to 2031-11-03
 
-NZCP ID:   urn:uuid:60a4f54d-4e30-4332-be33-ad78b1eafa4b
-Key:       did:web:nzcp.covid19.health.nz#key-1
-Signature: 0uB7HdcmPYMxZr27TxoJODepBdfsou6Da2sq2iPCMVT7qIpSn2ddZobuYysJ7FgasI9ytFiQS7M5bRD6ZtEUdw
+Pass ID:     urn:uuid:60a4f54d-4e30-4332-be33-ad78b1eafa4b
+Signing key: did:web:nzcp.covid19.health.nz#key-1
+Signature:   0uB7HdcmPYMxZr27TxoJODepBdfsou6Da2sq2iPCMVT7qIpSn2ddZobuYysJ7FgasI9ytFiQS7M5bRD6ZtEUdw
 
 Validation: FAIL
 > Untrusted issuer: got 'did:web:nzcp.covid19.health.nz'

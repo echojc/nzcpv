@@ -38,9 +38,9 @@ func main() {
 			tkn.NotBefore.Format("2006-01-02"), tkn.Expires.Format("2006-01-02"))
 
 		fmt.Println()
-		fmt.Printf("NZCP ID:   %s\n", tkn.JTI)
-		fmt.Printf("Key:       %s#%s\n", tkn.Issuer, tkn.KeyID)
-		fmt.Printf("Signature: %s\n",
+		fmt.Printf("Pass ID:     %s\n", tkn.JTI)
+		fmt.Printf("Signing key: %s#%s\n", tkn.Issuer, tkn.KeyID)
+		fmt.Printf("Signature:   %s\n",
 			base64.RawStdEncoding.EncodeToString(tkn.Signature))
 
 		fmt.Println()
