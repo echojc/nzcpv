@@ -25,6 +25,21 @@ func TestValidatorRejectsUnknownKey(t *testing.T) {
 	}
 }
 
+func TestValidatorRejectsNilKey(t *testing.T) {
+	tkn := tokenUntrusted(t)
+	v := nzcpv.NewValidator()
+	v.RegisterIssuer("did:web:nzcp.covid19.health.nz")
+	err := v.RegisterPublicKey("did:web:nzcp.covid19.health.nz#key-1", nil)
+	if err != nil {
+		t.Skipf("Could not register nil test key: %v\n", err)
+	}
+
+	expected := []error{nzcpv.ErrUnknownPublicKey}
+	if errs := v.ValidateToken(tkn); !checkErrors(expected, errs) {
+		t.Errorf("Expected %v but got %v", expected, errs)
+	}
+}
+
 func TestValidatorRejectsUntrustedIssuer(t *testing.T) {
 	tkn := tokenUntrusted(t)
 	v := nzcpv.NewValidator()

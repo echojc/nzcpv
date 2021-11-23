@@ -110,14 +110,17 @@ func (v *Validator) validateTokenV1(t *Token) (errs []error) {
 		// TODO retrieve?
 		errs = append(errs,
 			fmt.Errorf("%w: got '%s'", ErrUnknownPublicKey, keyID))
-	} else if key != nil {
+	} else if key == nil {
+		errs = append(errs,
+			fmt.Errorf("%w: key '%s' is nil", ErrUnknownPublicKey, keyID))
+	} else {
 		if !ecdsa.Verify(
 			key,
 			t.digest,
 			big.NewInt(0).SetBytes(t.Signature[:32]),
 			big.NewInt(0).SetBytes(t.Signature[32:])) {
 			errs = append(errs,
-				fmt.Errorf("%w: did not verify", ErrBadSignature))
+				fmt.Errorf("%w: failed verification", ErrBadSignature))
 		}
 	}
 
