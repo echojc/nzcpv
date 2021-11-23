@@ -1,13 +1,10 @@
 package nzcpv
 
 import (
-	"bytes"
-	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/base32"
 	"errors"
 	"fmt"
-	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
@@ -28,9 +25,6 @@ type Token struct {
 
 	cti    []byte
 	digest []byte
-
-	validated bool
-	errs      []error
 }
 
 type Claims struct {
@@ -55,18 +49,6 @@ var (
 	ErrInvalidTokenFormat = errors.New("Invalid token format")
 	ErrInvalidTokenHeader = errors.New("Invalid token header")
 	ErrInvalidTokenBody   = errors.New("Invalid token body")
-
-	ErrBadSignature            = errors.New("Bad signature")
-	ErrInvalidSigningAlgorithm = errors.New("Invalid signing algorithm")
-	ErrUntrustedIssuer         = errors.New("Untrusted issuer")
-	ErrUnknownPublicKey        = errors.New("Unknown public key")
-
-	ErrTokenNotActive       = errors.New("Token not yet active")
-	ErrTokenExpired         = errors.New("Token has expired")
-	ErrInvalidCTI           = errors.New("Invalid CTI")
-	ErrInvalidClaimsContext = errors.New("Claims context is invalid")
-	ErrInvalidClaimsType    = errors.New("Claims type is invalid")
-	ErrInvalidTokenVersion  = errors.New("Token version is invalid")
 )
 
 // NewToken parses an encoded NZCP from the QR code data. If err is nil, the
@@ -106,24 +88,6 @@ func NewToken(qr string) (*Token, error) {
 		return nil, fmt.Errorf("%w: expected '1', got '%d'",
 			ErrBadNZCPVersion, version)
 	}
-}
-
-// Valid validates the token according to the specification and returns whether
-// it is valid.
-func (t *Token) Valid() bool {
-	if !t.validated {
-		t.validateTokenV1()
-	}
-	return len(t.errs) == 0
-}
-
-// Errs returns all the validation errors encountered while validating this
-// token. If the token is valid, this will be nil.
-func (t *Token) Errs() []error {
-	if !t.validated {
-		t.validateTokenV1()
-	}
-	return t.errs
 }
 
 func unmarshalTokenV1(data []byte) (*Token, error) {
@@ -200,96 +164,4 @@ func unmarshalTokenV1(data []byte) (*Token, error) {
 		cti:    p.CTI,
 		digest: digest[:],
 	}, nil
-}
-
-func (t *Token) validateTokenV1() {
-	if t.Algorithm != -7 {
-		t.errs = append(t.errs,
-			fmt.Errorf("%w: expected -7, got %d", ErrInvalidSigningAlgorithm, t.Algorithm))
-	}
-
-	if _, ok := trustedIssuers[t.Issuer]; !ok {
-		t.errs = append(t.errs,
-			fmt.Errorf("%w: got '%s'", ErrUntrustedIssuer, t.Issuer))
-	}
-
-	// verify signature
-	keyID := t.Issuer + "#" + t.KeyID
-	key, ok := keys[keyID]
-	if !ok {
-		// TODO retrieve?
-		t.errs = append(t.errs,
-			fmt.Errorf("%w: got '%s'", ErrUnknownPublicKey, keyID))
-	} else if key != nil {
-		if !ecdsa.Verify(
-			keys[keyID],
-			t.digest,
-			big.NewInt(0).SetBytes(t.Signature[:32]),
-			big.NewInt(0).SetBytes(t.Signature[32:])) {
-			t.errs = append(t.errs,
-				fmt.Errorf("%w: did not verify", ErrBadSignature))
-		}
-	}
-
-	// timestamps
-	now := time.Now()
-	if now.Before(t.NotBefore) {
-		t.errs = append(t.errs,
-			fmt.Errorf("%w (nbf: %v)", ErrTokenNotActive, t.NotBefore))
-	}
-	if now.After(t.Expires) {
-		t.errs = append(t.errs,
-			fmt.Errorf("%w (exp: %v)", ErrTokenExpired, t.Expires))
-	}
-
-	// cti/jti: any non-zero uuid is valid
-	nilUUID := [16]byte{}
-	if len(t.cti) != 16 || bytes.Equal(t.cti, nilUUID[:]) {
-		t.errs = append(t.errs,
-			fmt.Errorf("%w: got '%x'", ErrInvalidCTI, t.cti))
-	}
-
-	// claims
-	if len(t.Claims.Context) < 1 ||
-		t.Claims.Context[0] != "https://www.w3.org/2018/credentials/v1" {
-		t.errs = append(t.errs,
-			fmt.Errorf("%w: @context[0] must be '%s' (got: %s)",
-				ErrInvalidClaimsContext,
-				"https://www.w3.org/2018/credentials/v1",
-				t.Claims.Context[0]))
-	}
-	containsNZCPContext := false
-	for _, c := range t.Claims.Context {
-		if c == "https://nzcp.covid19.health.nz/contexts/v1" {
-			containsNZCPContext = true
-			break
-		}
-	}
-	if !containsNZCPContext {
-		t.errs = append(t.errs,
-			fmt.Errorf("%w: missing NZCP context '%s'",
-				ErrInvalidClaimsContext,
-				"https://nzcp.covid19.health.nz/contexts/v1"))
-	}
-
-	// pass type
-	if len(t.Claims.Type) != 2 ||
-		t.Claims.Type[0] != "VerifiableCredential" ||
-		t.Claims.Type[1] != "PublicCovidPass" {
-		t.errs = append(t.errs,
-			fmt.Errorf("%w: type must be %v (got: %v)",
-				ErrInvalidClaimsType,
-				[]string{"VerifiableCredential", "PublicCovidPass"},
-				t.Claims.Type))
-	}
-
-	// version
-	if t.Claims.Version != "1.0.0" {
-		t.errs = append(t.errs,
-			fmt.Errorf("%w: token version must be 1.0.0 (got: '%s')",
-				ErrInvalidTokenVersion,
-				t.Claims.Version))
-	}
-
-	t.validated = true
 }

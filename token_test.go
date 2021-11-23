@@ -1,7 +1,10 @@
 package nzcpv_test
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"errors"
+	"math/big"
 	"testing"
 
 	"github.com/echojc/nzcpv"
@@ -16,8 +19,9 @@ func TestValidToken(t *testing.T) {
 		t.FailNow()
 	}
 
-	if !tkn.Valid() || tkn.Errs() != nil {
-		t.Errorf("Expected token to be valid, got: %v", tkn.Errs())
+	tv := newTestValidator(t)
+	if errs := tv.ValidateToken(tkn); errs != nil {
+		t.Errorf("Expected token to be valid, got: %v", errs)
 		t.FailNow()
 	}
 }
@@ -59,25 +63,8 @@ var invalidTokens = []struct {
 	},
 }
 
-func checkErrors(expected, actual []error) bool {
-	if len(expected) != len(actual) {
-		return false
-	}
-
-	remaining := make([]error, len(actual))
-	copy(remaining, actual)
-	for _, target := range expected {
-		for i, err := range remaining {
-			if errors.Is(err, target) {
-				remaining = append(remaining[:i], remaining[i+1:]...)
-				break
-			}
-		}
-	}
-	return len(remaining) == 0
-}
-
 func TestInvalidTokens(t *testing.T) {
+	tv := newTestValidator(t)
 	for _, tc := range invalidTokens {
 		t.Run(tc.desc, func(t *testing.T) {
 			tkn, err := nzcpv.NewToken(tc.qr)
@@ -86,13 +73,8 @@ func TestInvalidTokens(t *testing.T) {
 				t.FailNow()
 			}
 
-			if tkn.Valid() {
-				t.Error("Token validated but expected it to be invalid.")
-				t.FailNow()
-			}
-
-			if !checkErrors(tc.expected, tkn.Errs()) {
-				t.Errorf("Expected %v, got %v", tc.expected, tkn.Errs())
+			if errs := tv.ValidateToken(tkn); !checkErrors(tc.expected, errs) {
+				t.Errorf("Expected %v, got %v", tc.expected, errs)
 				t.FailNow()
 			}
 		})
@@ -145,4 +127,50 @@ func TestCorruptQRs(t *testing.T) {
 			}
 		})
 	}
+}
+
+var testKey1 = &ecdsa.PublicKey{
+	Curve: elliptic.P256(),
+	X: big.NewInt(0).SetBytes([]byte{
+		0xcd, 0x14, 0x7e, 0x5c, 0x6b, 0x02, 0xa7, 0x5d,
+		0x95, 0xbd, 0xb8, 0x2e, 0x8b, 0x80, 0xc3, 0xe8,
+		0xee, 0x9c, 0xaa, 0x68, 0x5f, 0x3e, 0xe5, 0xcc,
+		0x86, 0x2d, 0x4e, 0xc4, 0xf9, 0x7c, 0xef, 0xad,
+	}),
+	Y: big.NewInt(0).SetBytes([]byte{
+		0x22, 0xfe, 0x52, 0x53, 0xa1, 0x6e, 0x5b, 0xe4,
+		0xd1, 0x62, 0x1e, 0x7f, 0x18, 0xea, 0xc9, 0x95,
+		0xc5, 0x7f, 0x82, 0x91, 0x7f, 0x1a, 0x91, 0x50,
+		0x84, 0x23, 0x83, 0xf0, 0xb4, 0xa4, 0xdd, 0x3d,
+	}),
+}
+
+func newTestValidator(t *testing.T) *nzcpv.Validator {
+	// add test issuer/key from specification
+	tv := nzcpv.NewValidator()
+	tv.RegisterIssuer("did:web:nzcp.covid19.health.nz")
+	err := tv.RegisterPublicKey("did:web:nzcp.covid19.health.nz#key-1", testKey1)
+	if err != nil {
+		t.Errorf("Could not register test keys for validator: %v\n", err)
+		t.FailNow()
+	}
+	return tv
+}
+
+func checkErrors(expected, actual []error) bool {
+	if len(expected) != len(actual) {
+		return false
+	}
+
+	remaining := make([]error, len(actual))
+	copy(remaining, actual)
+	for _, target := range expected {
+		for i, err := range remaining {
+			if errors.Is(err, target) {
+				remaining = append(remaining[:i], remaining[i+1:]...)
+				break
+			}
+		}
+	}
+	return len(remaining) == 0
 }
