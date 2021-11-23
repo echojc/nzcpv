@@ -24,9 +24,10 @@ type Token struct {
 	Expires   time.Time
 	JTI       string
 	Claims    Claims
-
 	Signature []byte
-	digest    []byte
+
+	cti    []byte
+	digest []byte
 }
 
 type Claims struct {
@@ -51,7 +52,6 @@ var (
 	ErrInvalidTokenFormat = errors.New("Invalid token format")
 	ErrInvalidTokenHeader = errors.New("Invalid token header")
 	ErrInvalidTokenBody   = errors.New("Invalid token body")
-	ErrInvalidCTI         = errors.New("Invalid CTI")
 
 	ErrBadSignature            = errors.New("Bad signature")
 	ErrInvalidSigningAlgorithm = errors.New("Invalid signing algorithm")
@@ -60,6 +60,7 @@ var (
 
 	ErrTokenNotActive       = errors.New("Token not yet active")
 	ErrTokenExpired         = errors.New("Token has expired")
+	ErrInvalidCTI           = errors.New("Invalid CTI")
 	ErrInvalidClaimsContext = errors.New("Claims context is invalid")
 	ErrInvalidClaimsType    = errors.New("Claims type is invalid")
 	ErrInvalidTokenVersion  = errors.New("Token version is invalid")
@@ -146,10 +147,12 @@ func unmarshalTokenV1(data []byte) (*Token, error) {
 	if err := cbor.Unmarshal(raw.Payload, &p); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidTokenBody, err)
 	}
-	// any non-zero uuid is valid
-	nilUUID := [16]byte{}
-	if len(p.CTI) != 16 || bytes.Equal(p.CTI, nilUUID[:]) {
-		return nil, fmt.Errorf("%w: got '%x'", ErrInvalidCTI, p.CTI)
+	var jti string
+	if len(p.CTI) == 16 {
+		jti = fmt.Sprintf("urn:uuid:%x-%x-%x-%x-%x",
+			p.CTI[0:4], p.CTI[4:6], p.CTI[6:8], p.CTI[8:10], p.CTI[10:16])
+	} else {
+		jti = fmt.Sprintf("urn:uuid:%x", p.CTI)
 	}
 
 	// build signature digest
@@ -171,12 +174,12 @@ func unmarshalTokenV1(data []byte) (*Token, error) {
 		Issuer:    p.Issuer,
 		NotBefore: time.Unix(p.NotBefore, 0),
 		Expires:   time.Unix(p.Expires, 0),
-		JTI: fmt.Sprintf("urn:uuid:%x-%x-%x-%x-%x",
-			p.CTI[0:4], p.CTI[4:6], p.CTI[6:8], p.CTI[8:10], p.CTI[10:16]),
-		Claims: p.Claims,
-
+		JTI:       jti,
+		Claims:    p.Claims,
 		Signature: raw.Signature,
-		digest:    digest[:],
+
+		cti:    p.CTI,
+		digest: digest[:],
 	}, nil
 }
 
@@ -211,6 +214,12 @@ func validateTokenV1(t *Token) error {
 	}
 	if now.After(t.Expires) {
 		return fmt.Errorf("%w (exp: %v)", ErrTokenExpired, t.Expires)
+	}
+
+	// cti/jti: any non-zero uuid is valid
+	nilUUID := [16]byte{}
+	if len(t.cti) != 16 || bytes.Equal(t.cti, nilUUID[:]) {
+		return fmt.Errorf("%w: got '%x'", ErrInvalidCTI, t.cti)
 	}
 
 	// claims
