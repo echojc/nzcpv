@@ -27,7 +27,7 @@ func ExampleNewToken() {
 	//   "NotBefore": "2021-11-03T09:05:30+13:00",
 	//   "Expires": "2031-11-03T09:05:30+13:00",
 	//   "JTI": "urn:uuid:60a4f54d-4e30-4332-be33-ad78b1eafa4b",
-	//   "Claims": {
+	//   "VerifiableCredential": {
 	//     "Context": [
 	//       "https://www.w3.org/2018/credentials/v1",
 	//       "https://nzcp.covid19.health.nz/contexts/v1"

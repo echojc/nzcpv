@@ -94,7 +94,8 @@ func (v *Validator) ValidateToken(t *Token) []error {
 func (v *Validator) validateTokenV1(t *Token) (errs []error) {
 	if t.Algorithm != -7 {
 		errs = append(errs,
-			fmt.Errorf("%w: expected -7, got %d", ErrInvalidSigningAlgorithm, t.Algorithm))
+			fmt.Errorf("%w: expected -7, got %d",
+				ErrInvalidSigningAlgorithm, t.Algorithm))
 	}
 
 	if _, ok := v.trustedIssuers[t.Issuer]; !ok {
@@ -139,17 +140,18 @@ func (v *Validator) validateTokenV1(t *Token) (errs []error) {
 	}
 
 	// claims
-	if len(t.Claims.Context) < 1 ||
-		t.Claims.Context[0] != "https://www.w3.org/2018/credentials/v1" {
+	vcContext := "https://www.w3.org/2018/credentials/v1"
+	if len(t.VerifiableCredential.Context) < 1 ||
+		t.VerifiableCredential.Context[0] != vcContext {
 		errs = append(errs,
 			fmt.Errorf("%w: @context[0] must be '%s' (got: %s)",
-				ErrInvalidClaimsContext,
-				"https://www.w3.org/2018/credentials/v1",
-				t.Claims.Context[0]))
+				ErrInvalidClaimsContext, vcContext,
+				t.VerifiableCredential.Context[0]))
 	}
+	nzcpContext := "https://nzcp.covid19.health.nz/contexts/v1"
 	containsNZCPContext := false
-	for _, c := range t.Claims.Context {
-		if c == "https://nzcp.covid19.health.nz/contexts/v1" {
+	for _, c := range t.VerifiableCredential.Context {
+		if c == nzcpContext {
 			containsNZCPContext = true
 			break
 		}
@@ -157,27 +159,26 @@ func (v *Validator) validateTokenV1(t *Token) (errs []error) {
 	if !containsNZCPContext {
 		errs = append(errs,
 			fmt.Errorf("%w: missing NZCP context '%s'",
-				ErrInvalidClaimsContext,
-				"https://nzcp.covid19.health.nz/contexts/v1"))
+				ErrInvalidClaimsContext, nzcpContext))
 	}
 
 	// pass type
-	if len(t.Claims.Type) != 2 ||
-		t.Claims.Type[0] != "VerifiableCredential" ||
-		t.Claims.Type[1] != "PublicCovidPass" {
+	if len(t.VerifiableCredential.Type) != 2 ||
+		t.VerifiableCredential.Type[0] != "VerifiableCredential" ||
+		t.VerifiableCredential.Type[1] != "PublicCovidPass" {
 		errs = append(errs,
 			fmt.Errorf("%w: type must be %v (got: %v)",
 				ErrInvalidClaimsType,
 				[]string{"VerifiableCredential", "PublicCovidPass"},
-				t.Claims.Type))
+				t.VerifiableCredential.Type))
 	}
 
 	// version
-	if t.Claims.Version != "1.0.0" {
+	if t.VerifiableCredential.Version != "1.0.0" {
 		errs = append(errs,
 			fmt.Errorf("%w: token version must be 1.0.0 (got: '%s')",
 				ErrInvalidTokenVersion,
-				t.Claims.Version))
+				t.VerifiableCredential.Version))
 	}
 
 	return errs

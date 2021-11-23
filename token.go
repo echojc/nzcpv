@@ -14,27 +14,27 @@ import (
 )
 
 type Token struct {
-	KeyID     string
-	Algorithm int
-	Issuer    string
-	NotBefore time.Time
-	Expires   time.Time
-	JTI       string
-	Claims    Claims
-	Signature []byte
+	KeyID                string
+	Algorithm            int
+	Issuer               string
+	NotBefore            time.Time
+	Expires              time.Time
+	JTI                  string
+	VerifiableCredential VerifiableCredential
+	Signature            []byte
 
 	cti    []byte
 	digest []byte
 }
 
-type Claims struct {
-	Context           []string `cbor:"@context"`
-	Version           string   `cbor:"version"`
-	Type              []string `cbor:"type"`
-	CredentialSubject Subject  `cbor:"credentialSubject"`
+type VerifiableCredential struct {
+	Context           []string          `cbor:"@context"`
+	Version           string            `cbor:"version"`
+	Type              []string          `cbor:"type"`
+	CredentialSubject CredentialSubject `cbor:"credentialSubject"`
 }
 
-type Subject struct {
+type CredentialSubject struct {
 	GivenName  string `cbor:"givenName"`
 	FamilyName string `cbor:"familyName"`
 	DOB        string `cbor:"dob"`
@@ -121,11 +121,11 @@ func unmarshalTokenV1(data []byte) (*Token, error) {
 	}
 
 	var p struct {
-		Issuer    string `cbor:"1,keyasint"`
-		NotBefore int64  `cbor:"5,keyasint"`
-		Expires   int64  `cbor:"4,keyasint"`
-		CTI       []byte `cbor:"7,keyasint"`
-		Claims    Claims `cbor:"vc"`
+		Issuer    string               `cbor:"1,keyasint"`
+		NotBefore int64                `cbor:"5,keyasint"`
+		Expires   int64                `cbor:"4,keyasint"`
+		CTI       []byte               `cbor:"7,keyasint"`
+		Claims    VerifiableCredential `cbor:"vc"`
 	}
 	if err := cbor.Unmarshal(raw.Payload, &p); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidTokenBody, err)
@@ -152,14 +152,14 @@ func unmarshalTokenV1(data []byte) (*Token, error) {
 	digest := sha256.Sum256(ss)
 
 	return &Token{
-		KeyID:     string(h.Kid),
-		Algorithm: h.Alg,
-		Issuer:    p.Issuer,
-		NotBefore: time.Unix(p.NotBefore, 0),
-		Expires:   time.Unix(p.Expires, 0),
-		JTI:       jti,
-		Claims:    p.Claims,
-		Signature: raw.Signature,
+		KeyID:                string(h.Kid),
+		Algorithm:            h.Alg,
+		Issuer:               p.Issuer,
+		NotBefore:            time.Unix(p.NotBefore, 0),
+		Expires:              time.Unix(p.Expires, 0),
+		JTI:                  jti,
+		VerifiableCredential: p.Claims,
+		Signature:            raw.Signature,
 
 		cti:    p.CTI,
 		digest: digest[:],
