@@ -113,6 +113,9 @@ func (v *Validator) validateTokenV1(t *Token) (errs []error) {
 	} else if key == nil {
 		errs = append(errs,
 			fmt.Errorf("%w: key '%s' is nil", ErrUnknownPublicKey, keyID))
+	} else if len(t.Signature) != 64 {
+		errs = append(errs,
+			fmt.Errorf("%w: incorrect length", ErrBadSignature))
 	} else {
 		if !ecdsa.Verify(
 			key,
